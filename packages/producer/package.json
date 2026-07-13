@@ -1,0 +1,14 @@
+{
+  "name": "@bg-jobs/producer",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bg-jobs/shared": "*",
+    "@bg-jobs/store": "*",
+    "commander": "^11.1.0"
+  }
+}

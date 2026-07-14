@@ -1,0 +1,301 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+
+.dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #1e293b;
+  margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+  font-size: 28px;
+  color: #60a5fa;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.status-dot.disconnected {
+  background: #ef4444;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #334155;
+}
+
+.card h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #94a3b8;
+}
+
+/* Queue Depth */
+.queue-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.queue-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.queue-label {
+  width: 80px;
+  text-transform: capitalize;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.bar-container {
+  flex: 1;
+  height: 24px;
+  background: #0f172a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  min-width: 4px;
+}
+
+.queue-count {
+  width: 30px;
+  text-align: right;
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+/* Workers */
+.worker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.worker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.status-indicator.alive {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.status-indicator.dead {
+  background: #ef4444;
+}
+
+.worker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.worker-status {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.worker-job {
+  font-size: 12px;
+  color: #60a5fa;
+}
+
+/* Job Lists */
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.job-list.compact {
+  max-height: 300px;
+}
+
+.job-item {
+  padding: 12px;
+  border-radius: 8px;
+  background: #0f172a;
+  border-left: 3px solid #334155;
+}
+
+.job-item.in-flight {
+  border-left-color: #f59e0b;
+}
+
+.job-item.completed {
+  border-left-color: #22c55e;
+}
+
+.job-item.failed {
+  border-left-color: #ef4444;
+  cursor: pointer;
+}
+
+.job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.job-type {
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: bold;
+  color: #60a5fa;
+  padding: 2px 8px;
+  background: #1e3a5f;
+  border-radius: 4px;
+}
+
+.job-elapsed {
+  color: #f59e0b;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.job-error {
+  flex: 1;
+  font-size: 14px;
+  color: #fca5a5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-attempts {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.job-details {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.job-expanded {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #334155;
+}
+
+.stack-trace {
+  background: #0a0f1a;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #fca5a5;
+  overflow-x: auto;
+  max-height: 200px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.retry-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover {
+  background: #2563eb;
+}
+
+.retry-btn:disabled {
+  background: #1e3a5f;
+  cursor: not-allowed;
+}
+
+.empty {
+  text-align: center;
+  padding: 20px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}

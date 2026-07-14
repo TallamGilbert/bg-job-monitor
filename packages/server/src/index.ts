@@ -1,2 +1,2 @@
-export { WorkerMonitor } from './services/worker-monitor';
-export { ReclaimService } from './services/reclaim-service';
+// Server entry point - exports for programmatic use
+export { startServer } from './app';

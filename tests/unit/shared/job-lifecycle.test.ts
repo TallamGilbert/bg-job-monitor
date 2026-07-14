@@ -10,7 +10,7 @@ describe('Job Lifecycle', () => {
     it('should allow valid transitions', () => {
       expect(isValidTransition(JobState.QUEUED, JobState.IN_FLIGHT)).toBe(true);
       expect(isValidTransition(JobState.IN_FLIGHT, JobState.COMPLETED)).toBe(true);
-      expect(isValidTransition(JobState.IN_FLIGHT, JobState.FAILED).tobe(true);
+      expect(isValidTransition(JobState.IN_FLIGHT, JobState.FAILED)).toBe(true);
       expect(isValidTransition(JobState.FAILED, JobState.QUEUED)).toBe(true); // retry
     });
 

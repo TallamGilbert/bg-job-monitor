@@ -10,7 +10,6 @@ import {
   isValidTransition,
   InvalidTransitionError,
   JobNotFoundError,
-  JobAlreadyClaimedError,
   WorkerNotFoundError 
 } from '@bg-jobs/shared';
 
@@ -66,19 +65,6 @@ const CLAIM_JOB_SCRIPT = `
   redis.call('HSET', 'worker:' .. workerId, 'currentJobId', id)
   
   return id
-`;
-
-const GET_JOB_HISTORY_SCRIPT = `
-  local jobKey = 'job:' .. KEYS[1]
-  local exists = redis.call('EXISTS', jobKey)
-  if exists == 0 then
-    return nil
-  end
-  
-  local job = redis.call('HGETALL', jobKey)
-  local history = redis.call('LRANGE', 'job:' .. KEYS[1] .. ':history', 0, -1)
-  
-  return {job, history}
 `;
 
 export class RedisStore implements IStore {
@@ -178,13 +164,16 @@ export class RedisStore implements IStore {
     }
 
     const now = new Date().toISOString();
-    job.state = JobState.COMPLETED;
-    job.completedAt = now;
-    job.updatedAt = now;
-
-    await this.client.hset(`job:${job.id}`, this.serializeJob(job));
-    await this.client.srem('jobs:in-flight', job.id);
-    await this.client.lpush('completed:recent', job.id);
+    
+    // Update only the fields that change
+    await this.client.hset(`job:${jobId}`, {
+      state: JobState.COMPLETED,
+      completedAt: now,
+      updatedAt: now,
+    });
+    
+    await this.client.srem('jobs:in-flight', jobId);
+    await this.client.lpush('completed:recent', jobId);
     await this.client.ltrim('completed:recent', 0, 99); // Keep last 100
     
     // Clear worker's current job
@@ -193,8 +182,12 @@ export class RedisStore implements IStore {
     // Add history
     await this.addStateHistory(jobId, JobState.COMPLETED, now);
 
+    // Get updated job
+    const updatedJob = await this.getJob(jobId);
+    if (!updatedJob) throw new JobNotFoundError(jobId);
+    
     console.log(`Job completed: ${jobId}`);
-    return job;
+    return updatedJob;
   }
 
   async failJob(jobId: string, workerId: string, error: Error): Promise<Job> {
@@ -206,15 +199,17 @@ export class RedisStore implements IStore {
     }
 
     const now = new Date().toISOString();
-    job.state = JobState.FAILED;
-    job.error = error.message;
-    job.stackTrace = error.stack;
-    job.failedAt = now;
-    job.updatedAt = now;
-
-    await this.client.hset(`job:${job.id}`, this.serializeJob(job));
-    await this.client.srem('jobs:in-flight', job.id);
-    await this.client.sadd('jobs:failed', job.id);
+    
+    await this.client.hset(`job:${jobId}`, {
+      state: JobState.FAILED,
+      error: error.message,
+      stackTrace: error.stack || '',
+      failedAt: now,
+      updatedAt: now,
+    });
+    
+    await this.client.srem('jobs:in-flight', jobId);
+    await this.client.sadd('jobs:failed', jobId);
     
     // Clear worker's current job
     await this.client.hdel(`worker:${workerId}`, 'currentJobId');
@@ -222,8 +217,12 @@ export class RedisStore implements IStore {
     // Add history
     await this.addStateHistory(jobId, JobState.FAILED, now);
 
+    // Get updated job
+    const updatedJob = await this.getJob(jobId);
+    if (!updatedJob) throw new JobNotFoundError(jobId);
+    
     console.log(`Job failed: ${jobId} - ${error.message}`);
-    return job;
+    return updatedJob;
   }
 
   async getJob(jobId: string): Promise<Job | null> {
@@ -309,22 +308,31 @@ export class RedisStore implements IStore {
     }
 
     const now = new Date().toISOString();
-    job.state = JobState.QUEUED;
-    job.attempt += 1;
-    job.updatedAt = now;
-    job.enqueuedAt = now;
-    job.error = undefined;
-    job.stackTrace = undefined;
-    job.workerId = undefined;
-
-    await this.client.hset(`job:${job.id}`, this.serializeJob(job));
-    await this.client.srem('jobs:failed', job.id);
-    await this.client.zadd(`queue:${job.type}`, Date.now().toString(), job.id);
+    const newAttempt = job.attempt + 1;
+    
+    await this.client.hset(`job:${jobId}`, {
+      state: JobState.QUEUED,
+      attempt: newAttempt.toString(),
+      updatedAt: now,
+      enqueuedAt: now,
+      error: '',
+      stackTrace: '',
+      workerId: '',
+      startedAt: '',
+      completedAt: '',
+      failedAt: '',
+    });
+    
+    await this.client.srem('jobs:failed', jobId);
+    await this.client.zadd(`queue:${job.type}`, Date.now().toString(), jobId);
     
     await this.addStateHistory(jobId, JobState.QUEUED, now, 'retry');
 
-    console.log(`Job retried: ${jobId} (attempt ${job.attempt})`);
-    return job;
+    const updatedJob = await this.getJob(jobId);
+    if (!updatedJob) throw new JobNotFoundError(jobId);
+    
+    console.log(`Job retried: ${jobId} (attempt ${newAttempt})`);
+    return updatedJob;
   }
 
   async registerWorker(workerId: string): Promise<Worker> {
@@ -347,10 +355,11 @@ export class RedisStore implements IStore {
     const worker = await this.getWorker(workerId);
     if (!worker) throw new WorkerNotFoundError(workerId);
 
-    worker.lastHeartbeatAt = new Date().toISOString();
-    worker.status = 'alive';
-    
-    await this.client.hset(`worker:${workerId}`, this.serializeWorker(worker));
+    const now = new Date().toISOString();
+    await this.client.hset(`worker:${workerId}`, {
+      lastHeartbeatAt: now,
+      status: 'alive',
+    });
   }
 
   async getWorker(workerId: string): Promise<Worker | null> {
@@ -379,8 +388,8 @@ export class RedisStore implements IStore {
     for (const worker of workers) {
       const lastBeat = new Date(worker.lastHeartbeatAt).getTime();
       if (now - lastBeat > threshold && worker.status === 'alive') {
+        await this.client.hset(`worker:${worker.id}`, { status: 'dead' });
         worker.status = 'dead';
-        await this.client.hset(`worker:${worker.id}`, this.serializeWorker(worker));
         deadWorkers.push(worker);
         console.log(`Worker marked dead: ${worker.id}`);
       }
@@ -398,12 +407,14 @@ export class RedisStore implements IStore {
         const job = await this.getJob(worker.currentJobId);
         if (job && job.state === JobState.IN_FLIGHT) {
           const now = new Date().toISOString();
-          job.state = JobState.QUEUED;
-          job.workerId = undefined;
-          job.startedAt = undefined;
-          job.updatedAt = now;
           
-          await this.client.hset(`job:${job.id}`, this.serializeJob(job));
+          await this.client.hset(`job:${job.id}`, {
+            state: JobState.QUEUED,
+            workerId: '',
+            startedAt: '',
+            updatedAt: now,
+          });
+          
           await this.client.srem('jobs:in-flight', job.id);
           
           // Re-queue with original priority
@@ -415,8 +426,11 @@ export class RedisStore implements IStore {
           
           await this.addStateHistory(job.id, JobState.QUEUED, now, 'reclaimed');
           
-          reclaimedJobs.push(job);
-          console.log(`Job reclaimed: ${job.id} from dead worker ${worker.id}`);
+          const updatedJob = await this.getJob(job.id);
+          if (updatedJob) {
+            reclaimedJobs.push(updatedJob);
+            console.log(`Job reclaimed: ${job.id} from dead worker ${worker.id}`);
+          }
         }
       }
     }

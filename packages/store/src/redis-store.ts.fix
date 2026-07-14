@@ -1,0 +1,47 @@
+  async reclaimJobsFromDeadWorkers(threshold: number): Promise<Job[]> {
+    // First mark any newly dead workers
+    await this.markDeadWorkers(threshold);
+    
+    // Get ALL dead workers (not just newly marked)
+    const allWorkers = await this.getWorkers();
+    const deadWorkers = allWorkers.filter(w => w.status === 'dead');
+    
+    const reclaimedJobs: Job[] = [];
+
+    for (const worker of deadWorkers) {
+      if (worker.currentJobId) {
+        const job = await this.getJob(worker.currentJobId);
+        if (job && job.state === JobState.IN_FLIGHT) {
+          const now = new Date().toISOString();
+          
+          await this.client.hset(`job:${job.id}`, {
+            state: JobState.QUEUED,
+            workerId: '',
+            startedAt: '',
+            updatedAt: now,
+          });
+          
+          await this.client.srem('jobs:in-flight', job.id);
+          
+          if (job.priority === 'high') {
+            await this.client.zadd('queue:high', Date.now().toString(), job.id);
+          } else {
+            await this.client.zadd(`queue:${job.type}`, Date.now().toString(), job.id);
+          }
+          
+          await this.addStateHistory(job.id, JobState.QUEUED, now, 'reclaimed');
+          
+          const updatedJob = await this.getJob(job.id);
+          if (updatedJob) {
+            reclaimedJobs.push(updatedJob);
+            console.log(`Job reclaimed: ${job.id} from dead worker ${worker.id}`);
+          }
+          
+          // Clear the worker's current job
+          await this.client.hdel(`worker:${worker.id}`, 'currentJobId');
+        }
+      }
+    }
+
+    return reclaimedJobs;
+  }

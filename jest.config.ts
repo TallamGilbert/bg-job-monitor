@@ -9,10 +9,12 @@ const config: Config = {
     '^@bg-jobs/shared$': '<rootDir>/packages/shared/src',
     '^@bg-jobs/store$': '<rootDir>/packages/store/src',
   },
-  // Run tests serially to prevent Redis data conflicts
+  // Allow importing from packages directly
+  moduleDirectories: ['node_modules', 'packages'],
+  // Run tests serially
   maxWorkers: 1,
-  // Clear mocks between tests
-  clearMocks: true,
+  // Timeout for tests
+  testTimeout: 30000,
 };
 
 export default config;

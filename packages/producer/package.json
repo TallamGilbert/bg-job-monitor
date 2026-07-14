@@ -4,6 +4,8 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "enqueue": "ts-node src/index.ts enqueue",
+    "test-batch": "ts-node src/index.ts enqueue --batch --count 20",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

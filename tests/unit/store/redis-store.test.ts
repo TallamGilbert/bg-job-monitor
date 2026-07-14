@@ -10,20 +10,24 @@ import Redis from 'ioredis';
 describe('RedisStore - Phase 1 Tests', () => {
   let store: RedisStore;
   let redis: Redis;
+  let testRunId: string;
 
   beforeAll(async () => {
     store = new RedisStore('redis://localhost:6379');
     redis = new Redis('redis://localhost:6379');
     await store.connect();
+    testRunId = `test_${Date.now()}`;
   });
 
   afterAll(async () => {
+    await store.clearStore();
     await store.disconnect();
     await redis.quit();
   });
 
   beforeEach(async () => {
-    await store.clearStore();
+    // Clear ALL data between tests to prevent cross-contamination
+    await redis.flushdb();
   });
 
   describe('REQ-001: Job System Skeleton', () => {
@@ -141,9 +145,13 @@ describe('RedisStore - Phase 1 Tests', () => {
     it('should claim the oldest job first (FIFO order)', async () => {
       await store.registerWorker('worker-1');
       
+      // Clear any existing data
+      await redis.flushdb();
+      await store.registerWorker('worker-1');
+      
       // Enqueue jobs with different timestamps
       const job1 = await store.enqueueJob('email', { order: 1 });
-      await new Promise(resolve => setTimeout(resolve, 100)); // Ensure different timestamps
+      await new Promise(resolve => setTimeout(resolve, 100));
       const job2 = await store.enqueueJob('email', { order: 2 });
       await new Promise(resolve => setTimeout(resolve, 100));
       const job3 = await store.enqueueJob('email', { order: 3 });
@@ -157,7 +165,7 @@ describe('RedisStore - Phase 1 Tests', () => {
       expect(claimed2).not.toBeNull();
       expect(claimed3).not.toBeNull();
       
-      // Verify FIFO order
+      // Verify FIFO order by checking payloads
       expect(claimed1!.payload).toEqual({ order: 1 });
       expect(claimed2!.payload).toEqual({ order: 2 });
       expect(claimed3!.payload).toEqual({ order: 3 });

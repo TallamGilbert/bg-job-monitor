@@ -7,9 +7,11 @@
   "scripts": {
     "dev": "node scripts/dev.js",
     "test": "jest --config jest.config.ts",
-    "test:unit": "jest tests/unit",
+    "test:unit": "jest tests/unit/store/redis-store.test.ts tests/unit/shared/ --verbose --runInBand",
     "test:integration": "jest tests/integration",
-    "lint": "eslint . --ext .ts,.tsx"
+    "lint": "eslint . --ext .ts,.tsx",
+    "test:edge-cases": "jest tests/unit/store/edge-cases.test.ts --verbose --runInBand",
+    "test:phase1": "jest tests/unit/store/redis-store.test.ts --verbose --runInBand"
   },
   "devDependencies": {
     "@types/ioredis": "^4.28.10",

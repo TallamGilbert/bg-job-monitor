@@ -1,21 +1,21 @@
 {
   "name": "@bg-jobs/server",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "src/app.ts",
   "scripts": {
-    "start": "ts-node src/index.ts",
+    "start": "ts-node src/server-simple.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@bg-jobs/shared": "*",
     "@bg-jobs/store": "*",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "ws": "^8.16.0",
-    "cors": "^2.8.5"
+    "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/ws": "^8.5.10",
-    "@types/cors": "^2.8.17"
+    "@types/ws": "^8.5.10"
   }
 }
